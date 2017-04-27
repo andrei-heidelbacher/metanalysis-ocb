@@ -38,6 +38,8 @@ targetCompatibility = JavaVersion.VERSION_1_8
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
     compile "com.github.andrei-heidelbacher.metanalysis:metanalysis-core:$metanalysisVersion"
+    runtime "com.github.andrei-heidelbacher.metanalysis:metanalysis-git:$metanalysisVersion"
+    runtime "com.github.andrei-heidelbacher.metanalysis:metanalysis-java:$metanalysisVersion"
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion"
     testCompile "junit:junit:$junitVersion"
 }
