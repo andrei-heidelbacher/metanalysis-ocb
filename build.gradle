@@ -3,10 +3,10 @@ version '0.1.0'
 
 buildscript {
     ext {
-        kotlinVersion = '1.1.2'
-        dokkaVersion = '0.9.13'
-        junitVersion = '4.12'
-        metanalysisVersion = '0.1.4'
+        kotlin_version = '1.1.3-2'
+        dokka_version = '0.9.15'
+        junit_version = '4.12'
+        metanalysis_version = '0.1.6'
     }
 
     repositories {
@@ -15,8 +15,8 @@ buildscript {
     }
 
     dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
-        classpath "org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:$dokka_version"
     }
 }
 
@@ -26,22 +26,45 @@ repositories {
     maven { url 'https://jitpack.io' }
 }
 
-apply plugin: 'java'
+apply plugin: 'application'
 apply plugin: 'kotlin'
 apply plugin: 'org.jetbrains.dokka'
-apply plugin: 'maven'
 apply plugin: 'jacoco'
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_7
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
-    compile "com.github.andrei-heidelbacher.metanalysis:metanalysis-core:$metanalysisVersion"
-    runtime "com.github.andrei-heidelbacher.metanalysis:metanalysis-git:$metanalysisVersion"
-    runtime "com.github.andrei-heidelbacher.metanalysis:metanalysis-java:$metanalysisVersion"
-    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion"
-    testCompile "junit:junit:$junitVersion"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation "com.github.andreihh.metanalysis:metanalysis-core:$metanalysis_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+    testImplementation "junit:junit:$junit_version"
+}
+
+mainClassName = 'org.metanalysis.ocb.Main'
+
+distributions {
+    main {
+        contents {
+            from(dokka) {
+                into 'docs'
+            }
+        }
+    }
+}
+
+dokka {
+    moduleName = project.name
+    includes = ['Module.md']
+    impliedPlatforms = ['JVM']
+    jdkVersion = 7
+    outputFormat = 'javadoc'
+
+    linkMapping {
+        dir = "src/main/kotlin"
+        url = "https://github.com/andreihh/${project.name}/blob/master/${project.name}/$dir"
+        suffix = "#L"
+    }
 }
 
 jar {
@@ -49,35 +72,14 @@ jar {
     from rootProject.file('NOTICE')
 }
 
-task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
-    outputFormat = 'javadoc'
-    outputDirectory = javadoc.destinationDir
-}
-
 task sourcesJar(type: Jar, dependsOn: classes) {
     classifier = 'sources'
     from sourceSets.main.allSource
 }
 
-task javadocJar(type: Jar, dependsOn: [javadoc, dokkaJavadoc]) {
+task javadocJar(type: Jar, dependsOn: dokka) {
     classifier = 'javadoc'
-    from javadoc.destinationDir
-}
-
-task fatJar(type: Jar) {
-    classifier = 'all'
-
-    manifest {
-        attributes 'Main-Class': 'org.metanalysis.ocb.Main'
-    }
-
-    from {
-        configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
-    } {
-        exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
-    }
-
-    with jar
+    from dokka.outputDirectory
 }
 
 artifacts {
