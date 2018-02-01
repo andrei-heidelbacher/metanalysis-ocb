@@ -14,42 +14,20 @@
  * limitations under the License.
  */
 
-@file:JvmName("Main")
-
 package org.metanalysis.ocb
 
-import org.metanalysis.core.delta.NodeSetEdit.Add
-import org.metanalysis.core.delta.NodeSetEdit.Change
-import org.metanalysis.core.delta.NodeSetEdit.Remove
-import org.metanalysis.core.logging.LoggerFactory
-import org.metanalysis.core.model.SourceFile
-import org.metanalysis.core.delta.Transaction.Companion.apply
-import org.metanalysis.core.project.PersistentProject
-
-val logger = LoggerFactory.getLogger("metanalysis-ocb")
+import org.metanalysis.core.repository.PersistentRepository
 
 fun main(args: Array<String>) {
-    LoggerFactory.loadConfiguration("/logging.properties")
-    logger.info("Hello, world from logger!")
-    val project = PersistentProject.load()
-            ?: error("Project not found!")
-    val stats = project.listFiles().associate { path ->
-        val model = project.getFileModel(path)
-        val history = project.getFileHistory(path)
-        var sourceFile = SourceFile()
-        var addedMembers = 0
-        var removedMembers = 0
-        var changedMembers = 0
-        for ((_, _, _, transaction) in history) {
-            addedMembers += transaction?.nodeEdits
-                    ?.filterIsInstance<Add>()
-                    ?.size
-                    ?: 0
-            sourceFile = sourceFile.apply(transaction)
-        }
-        path to model.nodes.associate { node ->
-            node.identifier to 2
-        }
+    val path = if (args.size == 1) args[0] else null
+    val repository = PersistentRepository.load()
+        ?: error("Repository not found!")
+
+    val entries =
+        if (path == null) HistoryVisitor.visit(repository).entries
+        else HistoryVisitor.visit(repository, path).entries
+
+    for ((k, v) in entries.sortedByDescending { it.value }) {
+        println("$k: $v")
     }
-    println("Hello, world!")
 }

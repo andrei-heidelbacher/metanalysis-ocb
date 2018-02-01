@@ -12,26 +12,13 @@
 
 ### Environment requirements
 
-In order to use `metanalysis-ocb` you need to have `JDK 1.7` or newer.
+In order to use `metanalysis-ocb` you need to have `JDK 1.8` or newer.
 
 ### Using the command line
 
-Download the most recently released artifact with dependencies from
-[here](https://github.com/andreihh/metanalysis-ocb/releases) and run it:
-
-```java -jar metanalysis-ocb-$version-all help```
-
-## Building
-
-To build this project, run `./gradlew build`.
-
-To build the artifact with dependencies, run the following command after
- building the project: `./gradlew fatJar`. This will create the
-`metanalysis-ocb-$version-all.jar` artifact in `metanalysis-ocb/build/libs/`.
-
-## Documentation
-
-To generate the documentation, run `./gradlew javadocJar`.
+Download the most recently released distribution from
+[here](https://github.com/andreihh/metanalysis-ocb/releases) and run the
+executable from the `bin` directory: `./metanalysis-ocb`
 
 ## Licensing
 
