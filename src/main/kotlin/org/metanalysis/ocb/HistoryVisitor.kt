@@ -20,45 +20,21 @@ import org.metanalysis.core.model.AddNode
 import org.metanalysis.core.model.EditFunction
 import org.metanalysis.core.model.EditType
 import org.metanalysis.core.model.EditVariable
-import org.metanalysis.core.model.SourceNode
 import org.metanalysis.core.model.Project
 import org.metanalysis.core.model.ProjectEdit
 import org.metanalysis.core.model.RemoveNode
+import org.metanalysis.core.model.SourceNode
 import org.metanalysis.core.model.SourceNode.Companion.ENTITY_SEPARATOR
 import org.metanalysis.core.model.children
 import org.metanalysis.core.model.walkSourceTree
 import org.metanalysis.core.repository.Repository
 import org.metanalysis.core.repository.Transaction
+import kotlin.math.log2
 
 class HistoryVisitor private constructor() {
-    companion object {
-        private const val MODIFIER_COST: Int = 10
-        private const val SUPERTYPE_COST: Int = 25
-        private const val PARAMETER_COST: Int = 5
-        private const val LINE_COST: Int = 1
-        private const val SCALE_STEP: Double = 0.1
-
-        fun visit(repository: Repository): Map<String, Double> {
-            val visitor = HistoryVisitor()
-            for (transaction in repository.getHistory()) {
-                visitor.visit(transaction)
-            }
-            visitor.aggregate()
-            return visitor.weight.filterKeys { ENTITY_SEPARATOR !in it }
-        }
-
-        fun visit(repository: Repository, path: String): Map<String, Double> {
-            val visitor = HistoryVisitor()
-            for (transaction in repository.getHistory()) {
-                visitor.visit(transaction)
-            }
-            return visitor.weight.filterKeys { it.startsWith(path) }
-        }
-    }
-
     private val project = Project.empty()
     private val weight = hashMapOf<String, Double>()
-    private val scale = hashMapOf<String, Double>()
+    private val changes = hashMapOf<String, Int>()
 
     private fun getCost(edit: EditType): Int =
         (if (edit.modifierEdits.isNotEmpty()) MODIFIER_COST else 0) +
@@ -85,20 +61,21 @@ class HistoryVisitor private constructor() {
             is AddNode -> {
                 for (node in edit.node.walkSourceTree()) {
                     weight[node.id] = 0.0
-                    scale[node.id] = SCALE_STEP
+                    changes[node.id] = 1
                 }
             }
             is RemoveNode -> {
                 val nodes = project.get<SourceNode>(edit.id).walkSourceTree()
                 for (node in nodes) {
                     weight -= node.id
-                    scale -= node.id
+                    changes -= node.id
                 }
             }
             else -> {
-                val addedWeight = scale.getValue(edit.id) * getCost(edit)
+                val scale = log2(1.0 * changes.getValue(edit.id))
+                val addedWeight = scale * getCost(edit)
                 weight[edit.id] = weight.getValue(edit.id) + addedWeight
-                scale[edit.id] = scale.getValue(edit.id) + SCALE_STEP
+                changes[edit.id] = changes.getValue(edit.id) + 1
             }
         }
         project.apply(edit)
@@ -111,11 +88,36 @@ class HistoryVisitor private constructor() {
     }
 
     private fun aggregate() {
-        for (node in project.sourceTree.reversed()) {
+        for (node in project.sourceTree.sortedByDescending { it.id.length }) {
             for (child in node.children) {
                 weight[node.id] =
                     weight.getValue(node.id) + weight.getValue(child.id)
             }
+        }
+    }
+
+    companion object {
+        private const val MODIFIER_COST: Int = 10
+        private const val SUPERTYPE_COST: Int = 25
+        private const val PARAMETER_COST: Int = 5
+        private const val LINE_COST: Int = 1
+
+        fun visit(repository: Repository): Map<String, Double> {
+            val visitor = HistoryVisitor()
+            for (transaction in repository.getHistory()) {
+                visitor.visit(transaction)
+            }
+            visitor.aggregate()
+            return visitor.weight.filterKeys { ENTITY_SEPARATOR !in it }
+        }
+
+        fun visit(repository: Repository, path: String): Map<String, Double> {
+            val visitor = HistoryVisitor()
+            for (transaction in repository.getHistory()) {
+                visitor.visit(transaction)
+            }
+            visitor.aggregate()
+            return visitor.weight.filterKeys { it.startsWith(path) }
         }
     }
 }

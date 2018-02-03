@@ -16,10 +16,48 @@
 
 package org.metanalysis.ocb
 
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
+import org.metanalysis.core.repository.PersistentRepository
+import org.metanalysis.core.repository.PersistentRepository.Companion.persist
+import org.metanalysis.test.core.repository.repository
 
 class MainTest {
-    @Test fun `test main`() {
+    @Before fun setUpRepository() {
+        repository {
+            transaction("0") {
+                addSourceUnit("Main.java") {
+                    function("getVersion(String)") {
+                        parameter("name") {}
+                    }
+                }
+            }
+            transaction("1") {
+                addFunction("Main.java:setVersion(String)") {
+                    parameter("name") {}
+                }
+                addType("Main.java:Main") {
+                    function("getName()") {}
+                }
+            }
+            transaction("2") {
+                editFunction("Main.java:setVersion(String)") {
+                    modifiers { +"private" }
+                }
+                editVariable("Main.java:getVersion(String):name") {
+                    modifiers { +"public" }
+                }
+                removeNode("Main.java:Main")
+            }
+        }.persist()
+    }
+
+    @Test fun `smoke test`() {
         main(emptyArray())
+    }
+
+    @After fun cleanUpRepository() {
+        PersistentRepository.clean()
     }
 }
