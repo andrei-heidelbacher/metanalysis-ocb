@@ -17,13 +17,15 @@
 package org.metanalysis.ocb
 
 import org.metanalysis.core.repository.PersistentRepository
+import org.metanalysis.core.repository.Repository
 import org.metanalysis.core.serialization.JsonModule
 import org.metanalysis.ocb.HistoryVisitor.Companion.analyze
 
-fun main(args: Array<String>) {
-    val repository = PersistentRepository.load()
-        ?: error("Repository not found!")
+private fun loadRepository(): Repository =
+    PersistentRepository.load() ?: error("Repository not found!")
 
+fun main(args: Array<String>) {
+    val repository = loadRepository()
     val report = analyze(repository.getHistory())
     JsonModule.serialize(System.out, report.files)
 }
