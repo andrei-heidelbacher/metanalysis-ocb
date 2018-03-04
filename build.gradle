@@ -1,11 +1,11 @@
 group 'org.metanalysis'
-version '0.1.0'
+version '0.2.0'
 
 buildscript {
     ext {
-        kotlin_version = '1.2.21'
+        kotlin_version = '1.2.30'
         junit_version = '4.12'
-        metanalysis_version = '0.2.3'
+        metanalysis_version = '0.2.4'
     }
 
     repositories {

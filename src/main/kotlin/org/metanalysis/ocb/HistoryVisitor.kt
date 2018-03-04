@@ -18,39 +18,29 @@ package org.metanalysis.ocb
 
 import org.metanalysis.core.model.AddNode
 import org.metanalysis.core.model.EditFunction
-import org.metanalysis.core.model.EditType
 import org.metanalysis.core.model.EditVariable
+import org.metanalysis.core.model.Function
 import org.metanalysis.core.model.Project
 import org.metanalysis.core.model.ProjectEdit
 import org.metanalysis.core.model.RemoveNode
 import org.metanalysis.core.model.SourceNode
-import org.metanalysis.core.model.SourceNode.Companion.ENTITY_SEPARATOR
-import org.metanalysis.core.model.children
+import org.metanalysis.core.model.SourceUnit
+import org.metanalysis.core.model.Type
+import org.metanalysis.core.model.Variable
 import org.metanalysis.core.model.walkSourceTree
-import org.metanalysis.core.repository.Repository
 import org.metanalysis.core.repository.Transaction
-import kotlin.math.log2
+import kotlin.math.ln
 
 class HistoryVisitor private constructor() {
     private val project = Project.empty()
     private val weight = hashMapOf<String, Double>()
     private val changes = hashMapOf<String, Int>()
 
-    private fun getCost(edit: EditType): Int =
-        (if (edit.modifierEdits.isNotEmpty()) MODIFIER_COST else 0) +
-            (if (edit.supertypeEdits.isNotEmpty()) SUPERTYPE_COST else 0)
+    private fun getCost(edit: EditFunction): Int = edit.bodyEdits.size
 
-    private fun getCost(edit: EditFunction): Int =
-        (if (edit.modifierEdits.isNotEmpty()) MODIFIER_COST else 0) +
-            (if (edit.parameterEdits.isNotEmpty()) PARAMETER_COST else 0) +
-            edit.bodyEdits.size * LINE_COST
-
-    private fun getCost(edit: EditVariable): Int =
-        (if (edit.modifierEdits.isNotEmpty()) MODIFIER_COST else 0) +
-            edit.initializerEdits.size * LINE_COST
+    private fun getCost(edit: EditVariable): Int = edit.initializerEdits.size
 
     private fun getCost(edit: ProjectEdit): Int = when (edit) {
-        is EditType -> getCost(edit)
         is EditFunction -> getCost(edit)
         is EditVariable -> getCost(edit)
         else -> 0
@@ -72,7 +62,7 @@ class HistoryVisitor private constructor() {
                 }
             }
             else -> {
-                val scale = log2(1.0 * changes.getValue(edit.id))
+                val scale = ln(1.0 * changes.getValue(edit.id))
                 val addedWeight = scale * getCost(edit)
                 weight[edit.id] = weight.getValue(edit.id) + addedWeight
                 changes[edit.id] = changes.getValue(edit.id) + 1
@@ -87,37 +77,56 @@ class HistoryVisitor private constructor() {
         }
     }
 
-    private fun aggregate() {
-        for (node in project.sourceTree.sortedByDescending { it.id.length }) {
-            for (child in node.children) {
-                weight[node.id] =
-                    weight.getValue(node.id) + weight.getValue(child.id)
+    private fun aggregate(variable: Variable): MemberReport =
+        MemberReport(variable.name, weight.getValue(variable.id))
+
+    private fun aggregate(function: Function): MemberReport =
+        MemberReport(function.signature, weight.getValue(function.id))
+
+    private fun aggregate(type: Type): TypeReport {
+        val members = arrayListOf<MemberReport>()
+        val types = arrayListOf<TypeReport>()
+        for (member in type.members) {
+            when (member) {
+                is Type -> types += aggregate(member)
+                is Function -> members += aggregate(member)
+                is Variable -> members += aggregate(member)
             }
         }
+        members.sortByDescending(MemberReport::value)
+        types.sortByDescending(TypeReport::value)
+        return TypeReport(type.name, members, types)
+    }
+
+    private fun aggregate(unit: SourceUnit): FileReport {
+        val members = arrayListOf<MemberReport>()
+        val types = arrayListOf<TypeReport>()
+        for (entity in unit.entities) {
+            when (entity) {
+                is Type -> types += aggregate(entity)
+                is Function -> members += aggregate(entity)
+                is Variable -> members += aggregate(entity)
+            }
+        }
+        members.sortByDescending(MemberReport::value)
+        types.sortByDescending(TypeReport::value)
+        return FileReport(unit.path, members, types)
+    }
+
+    private fun aggregate(): Report {
+        val fileReports = arrayListOf<FileReport>()
+        for (unit in project.sources) {
+            fileReports += aggregate(unit)
+        }
+        fileReports.sortByDescending(FileReport::value)
+        return Report(fileReports)
     }
 
     companion object {
-        private const val MODIFIER_COST: Int = 10
-        private const val SUPERTYPE_COST: Int = 25
-        private const val PARAMETER_COST: Int = 5
-        private const val LINE_COST: Int = 1
-
-        fun visit(repository: Repository): Map<String, Double> {
+        fun analyze(history: Iterable<Transaction>): Report {
             val visitor = HistoryVisitor()
-            for (transaction in repository.getHistory()) {
-                visitor.visit(transaction)
-            }
-            visitor.aggregate()
-            return visitor.weight.filterKeys { ENTITY_SEPARATOR !in it }
-        }
-
-        fun visit(repository: Repository, path: String): Map<String, Double> {
-            val visitor = HistoryVisitor()
-            for (transaction in repository.getHistory()) {
-                visitor.visit(transaction)
-            }
-            visitor.aggregate()
-            return visitor.weight.filterKeys { it.startsWith(path) }
+            history.forEach(visitor::visit)
+            return visitor.aggregate()
         }
     }
 }

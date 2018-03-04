@@ -17,17 +17,13 @@
 package org.metanalysis.ocb
 
 import org.metanalysis.core.repository.PersistentRepository
+import org.metanalysis.core.serialization.JsonModule
+import org.metanalysis.ocb.HistoryVisitor.Companion.analyze
 
 fun main(args: Array<String>) {
-    val path = if (args.size == 1) args[0] else null
     val repository = PersistentRepository.load()
         ?: error("Repository not found!")
 
-    val entries =
-        if (path == null) HistoryVisitor.visit(repository).entries
-        else HistoryVisitor.visit(repository, path).entries
-
-    for ((k, v) in entries.sortedByDescending { it.value }) {
-        println("$k: $v")
-    }
+    val report = analyze(repository.getHistory())
+    JsonModule.serialize(System.out, report.files)
 }
