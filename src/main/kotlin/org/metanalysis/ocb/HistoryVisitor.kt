@@ -114,11 +114,9 @@ class HistoryVisitor private constructor() {
     }
 
     private fun aggregate(): Report {
-        val fileReports = arrayListOf<FileReport>()
-        for (unit in project.sources) {
-            fileReports += aggregate(unit)
-        }
-        fileReports.sortByDescending(FileReport::value)
+        val fileReports = project.sources
+            .map(::aggregate)
+            .sortedByDescending(FileReport::value)
         return Report(fileReports)
     }
 
