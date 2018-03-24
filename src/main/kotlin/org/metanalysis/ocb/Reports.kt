@@ -21,23 +21,25 @@ data class Report(val files: List<FileReport>)
 data class FileReport(
     val file: String,
     val members: List<MemberReport>,
-    val types: List<TypeReport>
+    val children: List<TypeReport>
 ) {
+    val category: String = "SOLID Breakers"
+    val name: String = "Open-Closed Breakers"
 
     val value: Double =
         members.sumByDouble(MemberReport::value) +
-            types.sumByDouble(TypeReport::value)
+            children.sumByDouble(TypeReport::value)
 }
 
 data class TypeReport(
     val name: String,
     val members: List<MemberReport>,
-    val types: List<TypeReport>
+    val children: List<TypeReport>
 ) {
 
     val value: Double =
         members.sumByDouble(MemberReport::value) +
-            types.sumByDouble(TypeReport::value)
+            children.sumByDouble(TypeReport::value)
 }
 
 data class MemberReport(

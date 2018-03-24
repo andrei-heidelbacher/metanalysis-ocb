@@ -3,9 +3,9 @@ version '0.2.0'
 
 buildscript {
     ext {
-        kotlin_version = '1.2.30'
+        kotlin_version = '1.2.31'
         junit_version = '4.12'
-        metanalysis_version = '0.2.4'
+        metanalysis_version = '0.2.5'
     }
 
     repositories {

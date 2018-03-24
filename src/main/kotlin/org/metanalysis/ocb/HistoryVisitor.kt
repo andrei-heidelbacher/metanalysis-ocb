@@ -23,8 +23,8 @@ import org.metanalysis.core.model.Function
 import org.metanalysis.core.model.Project
 import org.metanalysis.core.model.ProjectEdit
 import org.metanalysis.core.model.RemoveNode
+import org.metanalysis.core.model.SourceFile
 import org.metanalysis.core.model.SourceNode
-import org.metanalysis.core.model.SourceUnit
 import org.metanalysis.core.model.Type
 import org.metanalysis.core.model.Variable
 import org.metanalysis.core.model.walkSourceTree
@@ -85,32 +85,32 @@ class HistoryVisitor private constructor() {
 
     private fun aggregate(type: Type): TypeReport {
         val members = arrayListOf<MemberReport>()
-        val types = arrayListOf<TypeReport>()
+        val children = arrayListOf<TypeReport>()
         for (member in type.members) {
             when (member) {
-                is Type -> types += aggregate(member)
+                is Type -> children += aggregate(member)
                 is Function -> members += aggregate(member)
                 is Variable -> members += aggregate(member)
             }
         }
         members.sortByDescending(MemberReport::value)
-        types.sortByDescending(TypeReport::value)
-        return TypeReport(type.name, members, types)
+        children.sortByDescending(TypeReport::value)
+        return TypeReport(type.name, members, children)
     }
 
-    private fun aggregate(unit: SourceUnit): FileReport {
+    private fun aggregate(unit: SourceFile): FileReport {
         val members = arrayListOf<MemberReport>()
-        val types = arrayListOf<TypeReport>()
+        val children = arrayListOf<TypeReport>()
         for (entity in unit.entities) {
             when (entity) {
-                is Type -> types += aggregate(entity)
+                is Type -> children += aggregate(entity)
                 is Function -> members += aggregate(entity)
                 is Variable -> members += aggregate(entity)
             }
         }
         members.sortByDescending(MemberReport::value)
-        types.sortByDescending(TypeReport::value)
-        return FileReport(unit.path, members, types)
+        children.sortByDescending(TypeReport::value)
+        return FileReport(unit.path, members, children)
     }
 
     private fun aggregate(): Report {
