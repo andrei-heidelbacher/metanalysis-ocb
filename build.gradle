@@ -5,6 +5,7 @@ buildscript {
     ext {
         kotlin_version = '1.2.31'
         junit_version = '4.12'
+        picocli_version = '3.0.0-alpha-2'
         metanalysis_version = '0.2.5'
     }
 
@@ -37,12 +38,13 @@ repositories {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "com.github.andreihh.metanalysis:metanalysis-core:$metanalysis_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "com.github.andreihh.metanalysis:metanalysis-core:$metanalysis_version"
+    implementation "info.picocli:picocli:$picocli_version"
 
-    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
-    testCompile "com.github.andreihh.metanalysis:metanalysis-test:$metanalysis_version"
-    testCompile "junit:junit:$junit_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+    testImplementation "com.github.andreihh.metanalysis:metanalysis-test:$metanalysis_version"
+    testImplementation "junit:junit:$junit_version"
 }
 
 jar {

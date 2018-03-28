@@ -18,7 +18,7 @@ In order to use `metanalysis-ocb` you need to have `JDK 1.8` or newer.
 
 Download the most recently released distribution from
 [here](https://github.com/andreihh/metanalysis-ocb/releases) and run the
-executable from the `bin` directory: `./metanalysis-ocb`
+executable from the `bin` directory: `./metanalysis-ocb --help`
 
 ## Licensing
 

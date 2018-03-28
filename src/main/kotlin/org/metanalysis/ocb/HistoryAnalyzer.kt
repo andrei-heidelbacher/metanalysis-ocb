@@ -19,22 +19,22 @@ package org.metanalysis.ocb
 import org.metanalysis.core.model.AddNode
 import org.metanalysis.core.model.EditFunction
 import org.metanalysis.core.model.EditVariable
-import org.metanalysis.core.model.Function
 import org.metanalysis.core.model.Project
 import org.metanalysis.core.model.ProjectEdit
 import org.metanalysis.core.model.RemoveNode
-import org.metanalysis.core.model.SourceFile
 import org.metanalysis.core.model.SourceNode
-import org.metanalysis.core.model.Type
-import org.metanalysis.core.model.Variable
+import org.metanalysis.core.model.sourcePath
 import org.metanalysis.core.model.walkSourceTree
 import org.metanalysis.core.repository.Transaction
 import kotlin.math.ln
 
-class HistoryVisitor private constructor() {
+class HistoryAnalyzer {
     private val project = Project.empty()
     private val weight = hashMapOf<String, Double>()
     private val changes = hashMapOf<String, Int>()
+
+    private fun getSourcePath(id: String): String =
+        project.get<SourceNode>(id).sourcePath
 
     private fun getCost(edit: EditFunction): Int = edit.bodyEdits.size
 
@@ -77,54 +77,33 @@ class HistoryVisitor private constructor() {
         }
     }
 
-    private fun aggregate(variable: Variable): MemberReport =
-        MemberReport(variable.name, weight.getValue(variable.id))
-
-    private fun aggregate(function: Function): MemberReport =
-        MemberReport(function.signature, weight.getValue(function.id))
-
-    private fun aggregate(type: Type): TypeReport {
-        val members = arrayListOf<MemberReport>()
-        val children = arrayListOf<TypeReport>()
-        for (member in type.members) {
-            when (member) {
-                is Type -> children += aggregate(member)
-                is Function -> members += aggregate(member)
-                is Variable -> members += aggregate(member)
-            }
-        }
-        members.sortByDescending(MemberReport::value)
-        children.sortByDescending(TypeReport::value)
-        return TypeReport(type.name, members, children)
-    }
-
-    private fun aggregate(unit: SourceFile): FileReport {
-        val members = arrayListOf<MemberReport>()
-        val children = arrayListOf<TypeReport>()
-        for (entity in unit.entities) {
-            when (entity) {
-                is Type -> children += aggregate(entity)
-                is Function -> members += aggregate(entity)
-                is Variable -> members += aggregate(entity)
-            }
-        }
-        members.sortByDescending(MemberReport::value)
-        children.sortByDescending(TypeReport::value)
-        return FileReport(unit.path, members, children)
-    }
-
-    private fun aggregate(): Report {
-        val fileReports = project.sources
-            .map(::aggregate)
-            .sortedByDescending(FileReport::value)
+    fun analyze(history: Iterable<Transaction>): Report {
+        history.forEach(::visit)
+        val membersByFile = changes.keys.groupBy(::getSourcePath)
+        val fileReports = membersByFile.map { (path, members) ->
+            val memberReports = members.map { id ->
+                MemberReport(id, changes.getValue(id), weight.getValue(id))
+            }.sortedByDescending(MemberReport::value)
+            FileReport(path, memberReports)
+        }.sortedByDescending(FileReport::value)
         return Report(fileReports)
     }
 
-    companion object {
-        fun analyze(history: Iterable<Transaction>): Report {
-            val visitor = HistoryVisitor()
-            history.forEach(visitor::visit)
-            return visitor.aggregate()
-        }
+    data class Report(val files: List<FileReport>)
+
+    data class FileReport(
+        val file: String,
+        val members: List<MemberReport>
+    ) {
+        val category: String = "SOLID Breakers"
+        val name: String = "Open-Closed Breakers"
+
+        val value: Double = members.sumByDouble(MemberReport::value)
     }
+
+    data class MemberReport(
+        val id: String,
+        val revisions: Int,
+        val value: Double
+    )
 }

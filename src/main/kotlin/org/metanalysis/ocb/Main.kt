@@ -17,15 +17,39 @@
 package org.metanalysis.ocb
 
 import org.metanalysis.core.repository.PersistentRepository
-import org.metanalysis.core.repository.Repository
 import org.metanalysis.core.serialization.JsonModule
-import org.metanalysis.ocb.HistoryVisitor.Companion.analyze
+import picocli.CommandLine
+import picocli.CommandLine.Command
+import picocli.CommandLine.ExecutionException
+import picocli.CommandLine.RunAll
+import picocli.CommandLine.defaultExceptionHandler
+import kotlin.system.exitProcess
 
-private fun loadRepository(): Repository =
-    PersistentRepository.load() ?: error("Repository not found!")
+@Command(
+    name = "metanalysis-ocb",
+    mixinStandardHelpOptions = true,
+    version = ["0.2"],
+    description = [],
+    showDefaultValues = true
+)
+class Main : Runnable {
+    override fun run() {
+        val analyzer = HistoryAnalyzer()
+        val repository = PersistentRepository.load()
+            ?: error("Repository not found!")
+        val report = analyzer.analyze(repository.getHistory())
+        JsonModule.serialize(System.out, report.files)
+    }
+}
 
-fun main(args: Array<String>) {
-    val repository = loadRepository()
-    val report = analyze(repository.getHistory())
-    JsonModule.serialize(System.out, report.files)
+fun main(vararg args: String) {
+    val cmd = CommandLine(Main())
+    val exceptionHandler = defaultExceptionHandler().andExit(1)
+    try {
+        cmd.parseWithHandlers(RunAll(), exceptionHandler, *args)
+    } catch (e: ExecutionException) {
+        System.err.println(e.message)
+        e.printStackTrace(System.err)
+        exitProcess(1)
+    }
 }

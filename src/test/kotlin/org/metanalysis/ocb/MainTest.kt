@@ -27,15 +27,15 @@ class MainTest {
     @Before fun setUpRepository() {
         repository {
             transaction("0") {
-                addSourceUnit("Main.java") {
+                addSourceFile("Main.java") {
                     function("getVersion(String)") {
-                        parameter("name") {}
+                        parameters("name")
                     }
                 }
             }
             transaction("1") {
                 addFunction("Main.java:setVersion(String)") {
-                    parameter("name") {}
+                    parameters("name")
                 }
                 addType("Main.java:Main") {
                     function("getName()") {}
@@ -45,7 +45,7 @@ class MainTest {
                 editFunction("Main.java:setVersion(String)") {
                     modifiers { +"private" }
                 }
-                editVariable("Main.java:getVersion(String):name") {
+                editFunction("Main.java:getVersion(String)") {
                     modifiers { +"public" }
                 }
                 removeNode("Main.java:Main")
@@ -54,7 +54,7 @@ class MainTest {
     }
 
     @Test fun `smoke test`() {
-        main(emptyArray())
+        main()
     }
 
     @After fun cleanUpRepository() {

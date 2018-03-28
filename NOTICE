@@ -17,4 +17,5 @@ applies to the following third-party libraries:
 - kotlin-stdlib-jdk8, Copyright JetBrains s.r.o.
 - kotlin-reflect, Copyright JetBrains s.r.o.
 - jackson-module-kotlin, Copyright FasterXML
+- picocli, Copyright Remko Popma
 - metanalysis-core, Copyright Andrei Heidelbacher
